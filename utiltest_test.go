@@ -5,6 +5,7 @@
 package ut
 
 import (
+	"log"
 	"strconv"
 	"testing"
 )
@@ -24,7 +25,7 @@ func ExampleAssertEqualIndex() {
 		expected string
 	}{
 		{9, "9"},
-		{11, "10"},
+		{11, "11"},
 	}
 	for i, item := range data {
 		// Call a function to test.
@@ -32,6 +33,20 @@ func ExampleAssertEqualIndex() {
 		// Then do an assert as a one-liner.
 		AssertEqualIndex(t, i, item.expected, actual)
 	}
+}
+
+func ExampleNewWriter() {
+	// For a func TestXXX(t *testing.T)
+	t := &testing.T{}
+
+	out := NewWriter(t)
+	defer out.Close()
+
+	logger := log.New(out, "Foo:", 0)
+
+	// These will be included in the test output only if the test case fails.
+	logger.Printf("Q: What is the answer to life the universe and everything?")
+	logger.Printf("A: %d", 42)
 }
 
 func TestAssertEqual(t *testing.T) {
@@ -107,4 +122,40 @@ func TestAssertEqualfFail(t *testing.T) {
 		t.Fail()
 	}()
 	<-wait
+}
+
+type stubTB struct {
+	*testing.T
+	out []string
+}
+
+func (s *stubTB) Log(args ...interface{}) {
+	if len(args) != 1 {
+		s.FailNow()
+	}
+	str, ok := args[0].([]byte)
+	if !ok {
+		panic("Unexpected Log() call with something else than []byte")
+	}
+	s.out = append(s.out, string(str))
+}
+
+func TestNewWriter(t *testing.T) {
+	tStub := &stubTB{T: t}
+	out := NewWriter(tStub)
+	defer func() {
+		if out != nil {
+			out.Close()
+		}
+	}()
+	logger := log.New(out, "Foo:", 0)
+	logger.Printf("Q: What is the answer to life the universe and everything?")
+	logger.Printf("A: %d", 42)
+	out.Close()
+	out = nil
+	expected := []string{
+		"Foo:Q: What is the answer to life the universe and everything?",
+		"Foo:A: 42",
+	}
+	AssertEqual(t, expected, tStub.out)
 }

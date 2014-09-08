@@ -6,7 +6,9 @@
 package ut
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -107,4 +109,44 @@ func AssertEqualf(t testing.TB, expected, actual interface{}, format string, ite
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf(Decorate(format), items...)
 	}
+}
+
+// testingWriter is used by NewWriter().
+type testingWriter struct {
+	t testing.TB
+	b bytes.Buffer
+}
+
+func (t testingWriter) Write(p []byte) (int, error) {
+	n, err := t.b.Write(p)
+	if err != nil || n != len(p) {
+		return n, err
+	}
+	// Manually scan for lines.
+	for {
+		b := t.b.Bytes()
+		i := bytes.Index(b, []byte("\n"))
+		if i == -1 {
+			break
+		}
+		t.t.Log(b[:i])
+		t.b.Next(i + 1)
+	}
+	return n, err
+}
+
+func (t testingWriter) Close() error {
+	remaining := t.b.Bytes()
+	if len(remaining) != 0 {
+		t.t.Log(remaining)
+	}
+	return nil
+}
+
+// NewWriter adapts a testing.TB into a io.WriteCloser that can be used
+// with to log.SetOutput().
+//
+// Don't forget to `defer foo.Close()`.
+func NewWriter(t testing.TB) io.WriteCloser {
+	return &testingWriter{t: t}
 }
