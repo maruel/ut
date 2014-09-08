@@ -146,7 +146,7 @@ func (t testingWriter) Close() error {
 // NewWriter adapts a testing.TB into a io.WriteCloser that can be used
 // with to log.SetOutput().
 //
-// Don't forget to `defer foo.Close()`.
+// Don't forget to defer foo.Close().
 func NewWriter(t testing.TB) io.WriteCloser {
 	return &testingWriter{t: t}
 }
