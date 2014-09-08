@@ -7,22 +7,49 @@ Requires Go 1.2 due to the use of `testing.TB`. If needed, replace with
 `*testing.T` at the cost of not being usable in benchmarks.
 
 
+Documentation
+-------------
+
+See the doc live at
+[![GoDoc](https://godoc.org/github.com/maruel/ut?status.svg)](https://godoc.org/github.com/maruel/ut)
+
+
 Examples
 --------
 
-    func TestFoo(t* testing.T) {
-        ut.AssertEqual(Foo(), 42)
-    }
+	package foo
 
-    func TestItoa(t* testing.T) {
-        data := []struct {
-            in       int
-            expected string
-        }{
-            {9, "9"},
-            {11, "10"},
-        }
-        for i, item := range data {
-            AssertEqualIndex(t, i, item.expected, strconv.Itoa(item.in))
-        }
-    }
+	import (
+		"github.com/maruel/ut"
+		"log"
+		"strconv"
+		"testing"
+	)
+
+	func TestItoa(t *testing.T) {
+		ut.AssertEqual(t, "42", strconv.Itoa(42))
+	}
+
+	func TestItoaDataListDriven(t *testing.T) {
+		data := []struct {
+			in       int
+			expected string
+		}{
+			{9, "9"},
+			{11, "11"},
+		}
+		for i, item := range data {
+			ut.AssertEqualIndex(t, i, item.expected, strconv.Itoa(item.in))
+		}
+	}
+
+	func TestWithLog(t *testing.T) {
+		out := ut.NewWriter(t)
+		defer out.Close()
+
+		logger := log.New(out, "Foo:", 0)
+
+		// These will be included in the test output only if the test case fails.
+		logger.Printf("Q: What is the answer to life the universe and everything?")
+		logger.Printf("A: %d", 42)
+	}

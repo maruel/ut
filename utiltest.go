@@ -19,7 +19,7 @@ import (
 
 const sep = string(os.PathSeparator)
 
-var blacklistedItems []string = []string{
+var blacklistedItems = []string{
 	filepath.Join("runtime", "proc.c"),
 	filepath.Join("testing", "testing.go"),
 	filepath.Join("utiltest", "utiltest.go"),
