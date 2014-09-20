@@ -129,7 +129,7 @@ func (t testingWriter) Write(p []byte) (int, error) {
 		if i == -1 {
 			break
 		}
-		t.t.Log(b[:i])
+		t.t.Log(string(b[:i]))
 		t.b.Next(i + 1)
 	}
 	return n, err
@@ -138,7 +138,7 @@ func (t testingWriter) Write(p []byte) (int, error) {
 func (t testingWriter) Close() error {
 	remaining := t.b.Bytes()
 	if len(remaining) != 0 {
-		t.t.Log(remaining)
+		t.t.Log(string(remaining))
 	}
 	return nil
 }

@@ -133,11 +133,11 @@ func (s *stubTB) Log(args ...interface{}) {
 	if len(args) != 1 {
 		s.FailNow()
 	}
-	str, ok := args[0].([]byte)
+	str, ok := args[0].(string)
 	if !ok {
-		panic("Unexpected Log() call with something else than []byte")
+		panic("Unexpected Log() call with something else than string")
 	}
-	s.out = append(s.out, string(str))
+	s.out = append(s.out, str)
 }
 
 func TestNewWriter(t *testing.T) {
