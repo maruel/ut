@@ -6,12 +6,9 @@ Collection of small functions to shorten Go test cases.
 Requires Go 1.2 due to the use of `testing.TB`. If needed, replace with
 `*testing.T` at the cost of not being usable in benchmarks.
 
-
-Documentation
--------------
-
-See the doc live at
 [![GoDoc](https://godoc.org/github.com/maruel/ut?status.svg)](https://godoc.org/github.com/maruel/ut)
+[![Build Status](https://travis-ci.org/maruel/ut.svg?branch=master)](https://travis-ci.org/maruel/ut)
+[![Coverage Status](https://img.shields.io/coveralls/maruel/ut.svg)](https://coveralls.io/r/maruel/ut?branch=master)
 
 
 Examples
