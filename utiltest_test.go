@@ -65,7 +65,7 @@ func TestAssertEqualFail(t *testing.T) {
 	wait := make(chan bool)
 	go func() {
 		defer func() {
-			recover()
+			_ = recover()
 			wait <- true
 		}()
 		AssertEqual(t2, true, false)
@@ -90,7 +90,7 @@ func TestAssertEqualIndexFail(t *testing.T) {
 	wait := make(chan bool)
 	go func() {
 		defer func() {
-			recover()
+			_ = recover()
 			wait <- true
 		}()
 		AssertEqualIndex(t2, 24, true, false)
@@ -115,7 +115,7 @@ func TestAssertEqualfFail(t *testing.T) {
 	wait := make(chan bool)
 	go func() {
 		defer func() {
-			recover()
+			_ = recover()
 			wait <- true
 		}()
 		AssertEqualf(t2, true, false, "foo %s %d", "bar", 2)
