@@ -20,6 +20,10 @@ import (
 const sep = string(os.PathSeparator)
 
 var blacklistedItems = []string{
+	// TODO(maruel): Not very efficient.
+	filepath.Join("runtime", "asm_386.s"),
+	filepath.Join("runtime", "asm_amd64.s"),
+	filepath.Join("runtime", "asm_arm.s"),
 	filepath.Join("runtime", "proc.c"),
 	filepath.Join("testing", "testing.go"),
 	filepath.Join("utiltest", "utiltest.go"),
