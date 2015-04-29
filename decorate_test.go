@@ -34,8 +34,9 @@ func d() string {
 
 func TestDecorateMax(t *testing.T) {
 	t.Parallel()
-	// This test is line number dependent.
-	base := 20
+	// This test is line number dependent. a() is not listed, only b(), c() and
+	// d().
+	base := 24
 	expected := fmt.Sprintf("%s:%d: %s:%d: %s:%d: Foo", file, base, file, base+4, file, base+8)
 	AssertEqual(t, expected, a())
 }
@@ -44,6 +45,6 @@ func TestDecorate(t *testing.T) {
 	t.Parallel()
 	// This test is line number dependent.
 	a := Decorate("Foo")
-	expected := fmt.Sprintf("%s:46: Foo", file)
+	expected := fmt.Sprintf("%s:47: Foo", file)
 	AssertEqual(t, expected, a)
 }

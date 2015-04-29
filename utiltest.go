@@ -15,18 +15,20 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/kr/pretty"
 )
 
 const sep = string(os.PathSeparator)
 
-var blacklistedItems = []string{
-	// TODO(maruel): Not very efficient.
-	filepath.Join("runtime", "asm_386.s"),
-	filepath.Join("runtime", "asm_amd64.s"),
-	filepath.Join("runtime", "asm_arm.s"),
-	filepath.Join("runtime", "proc.c"),
-	filepath.Join("testing", "testing.go"),
-	filepath.Join("utiltest", "utiltest.go"),
+var blacklistedItems = map[string]bool{
+	filepath.Join("runtime", "asm_386.s"):   true,
+	filepath.Join("runtime", "asm_amd64.s"): true,
+	filepath.Join("runtime", "asm_arm.s"):   true,
+	filepath.Join("runtime", "proc.c"):      true,
+	filepath.Join("testing", "testing.go"):  true,
+	filepath.Join("ut", "utiltest.go"):      true,
+	"utiltest.go":                           true,
 }
 
 // truncatePath only keep the base filename and its immediate containing directory.
@@ -41,10 +43,15 @@ func truncatePath(file string) string {
 	return file
 }
 
-// Decorate adds a prefix 'file:line: ' to a string, containing the 3 callers
-// in the stack.
+func isBlacklisted(file string) bool {
+	_, ok := blacklistedItems[file]
+	return ok
+}
+
+// Decorate adds a prefix 'file:line: ' to a string, containing the 3 recent
+// callers in the stack.
 //
-// It is mostly meant to be used internally.
+// It skips internal functions. It is mostly meant to be used internally.
 //
 // It is inspired by testing's decorate().
 func Decorate(s string) string {
@@ -52,33 +59,18 @@ func Decorate(s string) string {
 		file string
 		line int
 	}
-	items := make([]item, 4)
-	for i := len(items); i > 0; i-- {
+	items := []item{}
+	for i := 1; i < 8 && len(items) < 3; i++ {
 		_, file, line, ok := runtime.Caller(i) // decorate + log + public function.
 		if ok {
-			items[i-1].file = truncatePath(file)
-			items[i-1].line = line
-		} else {
-			items[i-1].file = ""
-		}
-	}
-	blacklisted := false
-	for i := range items {
-		for _, b := range blacklistedItems {
-			if items[i].file == b {
-				items[i].file = ""
-				blacklisted = true
-				break
+			file = truncatePath(file)
+			if !isBlacklisted(file) {
+				items = append(items, item{file, line})
 			}
 		}
 	}
-	if !blacklisted {
-		items[0].file = ""
-	}
 	for _, i := range items {
-		if i.file != "" {
-			s = fmt.Sprintf("%s:%d: %s", i.file, i.line, s)
-		}
+		s = fmt.Sprintf("%s:%d: %s", strings.Replace(i.file, "%", "%%", -1), i.line, s)
 	}
 	return s
 }
@@ -88,7 +80,7 @@ func Decorate(s string) string {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqual(t testing.TB, expected, actual interface{}) {
-	AssertEqualf(t, expected, actual, "assertEqual() failure.\nExpected: %#v\nActual:   %#v", expected, actual)
+	AssertEqualf(t, expected, actual, "AssertEqual() failure.\nExpected: %# v\nActual:   %# v", pretty.Formatter(expected), pretty.Formatter(actual))
 }
 
 // AssertEqualIndex verifies that two objects are equals and fails the test case
@@ -100,7 +92,7 @@ func AssertEqual(t testing.TB, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqualIndex(t testing.TB, index int, expected, actual interface{}) {
-	AssertEqualf(t, expected, actual, "assertEqual() failure.\nIndex: %d\nExpected: %#v\nActual:   %#v", index, expected, actual)
+	AssertEqualf(t, expected, actual, "AssertEqual() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, pretty.Formatter(expected), pretty.Formatter(actual))
 }
 
 // AssertEqualf verifies that two objects are equals and fails the test case
