@@ -161,9 +161,8 @@ func ExpectEqualIndex(t testing.TB, index int, expected, actual interface{}) {
 // Equality is determined via reflect.DeepEqual().
 func ExpectEqualf(t testing.TB, expected, actual interface{}, format string, items ...interface{}) {
 	if !reflect.DeepEqual(actual, expected) {
-		// This is thread-safe, t.Fatalf() is not.
-		t.Logf(Decorate(format), items...)
-		t.Fail()
+		// Errorf() is thread-safe, t.Fatalf() is not.
+		t.Errorf(Decorate(format), items...)
 	}
 }
 
