@@ -104,21 +104,26 @@ func AssertEqualIndex(t testing.TB, index int, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqualf(t testing.TB, expected, actual interface{}, format string, items ...interface{}) {
-	// TODO(maruel): Warning, this will be added in next commit, then will be
-	// enforced.
-	/*
-		file := ""
-		for i := 1; ; i++ {
-			if _, file2, _, ok := runtime.Caller(i); ok {
-				file = file2
-			} else {
+	// This is cheezy, as there's no way to figure out if the test was properly
+	// started by the test framework.
+	found := false
+	root := ""
+	for i := 1; ; i++ {
+		if _, file, _, ok := runtime.Caller(i); ok {
+			if filepath.Base(file) == "testing.go" {
+				found = true
 				break
 			}
+			root = file
+		} else {
+			break
 		}
-		if file != "testing.go" {
-			t.Logf(Decorate("ut.AssertEqual*() function MUST be called from within main test goroutine, use ut.ExpectEqual*() instead."))
-		}
-	*/
+	}
+	if !found {
+		t.Logf(Decorate("ut.AssertEqual*() function MUST be called from within main test goroutine, use ut.ExpectEqual*() instead; found %s."), root)
+		// TODO(maruel): Warning: this will be enforced soon.
+		//t.Fail()
+	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf(Decorate(format), items...)
 	}
