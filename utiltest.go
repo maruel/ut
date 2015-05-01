@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -19,7 +18,7 @@ import (
 	"github.com/kr/pretty"
 )
 
-const sep = string(os.PathSeparator)
+var newLine = []byte{'\n'}
 
 var blacklistedItems = map[string]bool{
 	filepath.Join("runtime", "asm_386.s"):   true,
@@ -31,16 +30,10 @@ var blacklistedItems = map[string]bool{
 	"utiltest.go":                           true,
 }
 
-// truncatePath only keep the base filename and its immediate containing directory.
+// truncatePath only keep the base filename and its immediate containing
+// directory.
 func truncatePath(file string) string {
-	if index := strings.LastIndex(file, sep); index >= 0 {
-		if index2 := strings.LastIndex(file[:index], sep); index2 >= 0 {
-			// Keep the first directory to help figure out which file it is.
-			return file[index2+1:]
-		}
-		return file[index+1:]
-	}
-	return file
+	return filepath.Join(filepath.Base(filepath.Dir(file)), filepath.Base(file))
 }
 
 func isBlacklisted(file string) bool {
@@ -75,16 +68,22 @@ func Decorate(s string) string {
 	return s
 }
 
-// AssertEqual verifies that two objects are equals and fails the test case
-// otherwise.
+// AssertEqual verifies that two objects are equals and calls FailNow() to
+// immediately cancel the test case.
+//
+// It must be called from the main goroutine. Other goroutines must call
+// ExpectEqual* flavors.
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqual(t testing.TB, expected, actual interface{}) {
 	AssertEqualf(t, expected, actual, "AssertEqual() failure.\nExpected: %# v\nActual:   %# v", pretty.Formatter(expected), pretty.Formatter(actual))
 }
 
-// AssertEqualIndex verifies that two objects are equals and fails the test case
-// otherwise.
+// AssertEqualIndex verifies that two objects are equals and calls FailNow() to
+// immediately cancel the test case.
+//
+// It must be called from the main goroutine. Other goroutines must call
+// ExpectEqual* flavors.
 //
 // It is meant to be used in loops where a list of intrant->expected is
 // processed so the assert failure message contains the index of the failing
@@ -92,18 +91,79 @@ func AssertEqual(t testing.TB, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqualIndex(t testing.TB, index int, expected, actual interface{}) {
-	AssertEqualf(t, expected, actual, "AssertEqual() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, pretty.Formatter(expected), pretty.Formatter(actual))
+	AssertEqualf(t, expected, actual, "AssertEqualIndex() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, pretty.Formatter(expected), pretty.Formatter(actual))
 }
 
-// AssertEqualf verifies that two objects are equals and fails the test case
-// otherwise.
+// AssertEqualf verifies that two objects are equals and calls FailNow() to
+// immediately cancel the test case.
+//
+// It must be called from the main goroutine. Other goroutines must call
+// ExpectEqual* flavors.
 //
 // This functions enables specifying an arbitrary string on failure.
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqualf(t testing.TB, expected, actual interface{}, format string, items ...interface{}) {
+	// TODO(maruel): Warning, this will be added in next commit, then will be
+	// enforced.
+	/*
+		file := ""
+		for i := 1; ; i++ {
+			if _, file2, _, ok := runtime.Caller(i); ok {
+				file = file2
+			} else {
+				break
+			}
+		}
+		if file != "testing.go" {
+			t.Logf(Decorate("ut.AssertEqual*() function MUST be called from within main test goroutine, use ut.ExpectEqual*() instead."))
+		}
+	*/
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf(Decorate(format), items...)
+	}
+}
+
+// ExpectEqual verifies that two objects are equals and calls Fail() to mark
+// the test case as failed but let it continue.
+//
+// It is fine to call this function from another goroutine than the main test
+// case goroutine.
+//
+// Equality is determined via reflect.DeepEqual().
+func ExpectEqual(t testing.TB, expected, actual interface{}) {
+	ExpectEqualf(t, expected, actual, "ExpectEqual() failure.\nExpected: %# v\nActual:   %# v", pretty.Formatter(expected), pretty.Formatter(actual))
+}
+
+// ExpectEqualIndex verifies that two objects are equals and calls Fail() to
+// mark the test case as failed but let it continue.
+//
+// It is fine to call this function from another goroutine than the main test
+// case goroutine.
+//
+// It is meant to be used in loops where a list of intrant->expected is
+// processed so the assert failure message contains the index of the failing
+// expectation.
+//
+// Equality is determined via reflect.DeepEqual().
+func ExpectEqualIndex(t testing.TB, index int, expected, actual interface{}) {
+	ExpectEqualf(t, expected, actual, "ExpectEqualIndex() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, pretty.Formatter(expected), pretty.Formatter(actual))
+}
+
+// ExpectEqualf verifies that two objects are equals and calls Fail() to mark
+// the test case as failed but let it continue.
+//
+// It is fine to call this function from another goroutine than the main test
+// case goroutine.
+//
+// This functions enables specifying an arbitrary string on failure.
+//
+// Equality is determined via reflect.DeepEqual().
+func ExpectEqualf(t testing.TB, expected, actual interface{}, format string, items ...interface{}) {
+	if !reflect.DeepEqual(actual, expected) {
+		// This is thread-safe, t.Fatalf() is not.
+		t.Logf(Decorate(format), items...)
+		t.Fail()
 	}
 }
 
@@ -121,7 +181,7 @@ func (t testingWriter) Write(p []byte) (int, error) {
 	// Manually scan for lines.
 	for {
 		b := t.b.Bytes()
-		i := bytes.Index(b, []byte("\n"))
+		i := bytes.Index(b, newLine)
 		if i == -1 {
 			break
 		}

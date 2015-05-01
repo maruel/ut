@@ -6,7 +6,9 @@ package ut
 
 import (
 	"log"
+	"path/filepath"
 	"strconv"
+	"sync"
 	"testing"
 )
 
@@ -35,6 +37,19 @@ func ExampleAssertEqualIndex() {
 	}
 }
 
+func ExampleExpectEqual() {
+	// For a func TestXXX(t *testing.T)
+	t := &testing.T{}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// ExpectEqual* flavors are safe to call in other goroutines.
+		ExpectEqual(t, "10", strconv.Itoa(10))
+	}()
+	wg.Wait()
+}
+
 func ExampleNewWriter() {
 	// For a func TestXXX(t *testing.T)
 	t := &testing.T{}
@@ -49,6 +64,8 @@ func ExampleNewWriter() {
 	logger.Printf("A: %d", 42)
 }
 
+// AssertEqual*
+
 func TestAssertEqual(t *testing.T) {
 	t.Parallel()
 	j := true
@@ -61,17 +78,24 @@ func TestAssertEqual(t *testing.T) {
 
 func TestAssertEqualFail(t *testing.T) {
 	t.Parallel()
+	// Abuse the testing framework to mark a fake test as failed.
 	t2 := &testing.T{}
-	wait := make(chan bool)
-	go func() {
-		defer func() {
-			_ = recover()
-			wait <- true
-		}()
-		AssertEqual(t2, true, false)
-		t.Fail()
+	var err interface{} = 1
+	defer func() {
+		if err != nil {
+			t.Fatalf("unexpected %s", err)
+		}
+		// Abuse the testing framework so this test is not marked as failed. It is
+		// not really skipped but that's the only way to set
+		// testing.T.finished = true.
+		t.SkipNow()
 	}()
-	<-wait
+	defer func() {
+		err = recover()
+	}()
+	AssertEqual(t2, true, false)
+	// This line is never executed.
+	t.Fail()
 }
 
 func TestAssertEqualIndex(t *testing.T) {
@@ -86,17 +110,24 @@ func TestAssertEqualIndex(t *testing.T) {
 
 func TestAssertEqualIndexFail(t *testing.T) {
 	t.Parallel()
+	// Abuse the testing framework to mark a fake test as failed.
 	t2 := &testing.T{}
-	wait := make(chan bool)
-	go func() {
-		defer func() {
-			_ = recover()
-			wait <- true
-		}()
-		AssertEqualIndex(t2, 24, true, false)
-		t.Fail()
+	var err interface{} = 1
+	defer func() {
+		if err != nil {
+			t.Fatalf("unexpected %s", err)
+		}
+		// Abuse the testing framework so this test is not marked as failed. It is
+		// not really skipped but that's the only way to set
+		// testing.T.finished = true.
+		t.SkipNow()
 	}()
-	<-wait
+	defer func() {
+		err = recover()
+	}()
+	AssertEqualIndex(t2, 24, true, false)
+	// This line is never executed.
+	t.Fail()
 }
 
 func TestAssertEqualf(t *testing.T) {
@@ -111,18 +142,118 @@ func TestAssertEqualf(t *testing.T) {
 
 func TestAssertEqualfFail(t *testing.T) {
 	t.Parallel()
+	// Abuse the testing framework to mark a fake test as failed.
 	t2 := &testing.T{}
-	wait := make(chan bool)
-	go func() {
-		defer func() {
-			_ = recover()
-			wait <- true
-		}()
-		AssertEqualf(t2, true, false, "foo %s %d", "bar", 2)
-		t.Fail()
+	var err interface{} = 1
+	defer func() {
+		if err != nil {
+			t.Fatalf("unexpected %s", err)
+		}
+		// Abuse the testing framework so this test is not marked as failed. It is
+		// not really skipped but that's the only way to set
+		// testing.T.finished = true.
+		t.SkipNow()
 	}()
-	<-wait
+	defer func() {
+		err = recover()
+	}()
+	AssertEqualf(t2, true, false, "foo %s %d", "bar", 2)
+	// This line is never executed.
+	t.Fail()
+
 }
+
+// ExpectEqual*
+
+func TestExpectEqual(t *testing.T) {
+	t.Parallel()
+	j := true
+	var i interface{} = &j
+	ExpectEqual(t, &j, i)
+	if t.Failed() {
+		t.Fatal("Expected success")
+	}
+}
+
+func TestExpectEqualFail(t *testing.T) {
+	t.Parallel()
+	// Abuse the testing framework to mark a fake test as failed.
+	t2 := &testing.T{}
+	completed := false
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		// Ensure ExpectEqual* can be run from a goroutine.
+		defer wg.Done()
+		ExpectEqual(t2, true, false)
+		completed = true
+	}()
+	wg.Wait()
+	if !completed {
+		t.Fatal("didn't complete")
+	}
+}
+
+func TestExpectEqualIndex(t *testing.T) {
+	t.Parallel()
+	j := true
+	var i interface{} = &j
+	ExpectEqualIndex(t, 24, &j, i)
+	if t.Failed() {
+		t.Fatal("Expected success")
+	}
+}
+
+func TestExpectEqualIndexFail(t *testing.T) {
+	t.Parallel()
+	// Abuse the testing framework to mark a fake test as failed.
+	t2 := &testing.T{}
+	completed := false
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		// Ensure ExpectEqual* can be run from a goroutine.
+		defer wg.Done()
+		ExpectEqualIndex(t2, 24, true, false)
+		completed = true
+	}()
+	wg.Wait()
+	if !completed {
+		t.Fatal("didn't complete")
+	}
+}
+
+func TestExpectEqualf(t *testing.T) {
+	t.Parallel()
+	j := true
+	var i interface{} = &j
+	ExpectEqualf(t, &j, i, "foo %s %d", "bar", 2)
+	if t.Failed() {
+		t.Fatal("Expected success")
+	}
+}
+
+func TestExpectEqualfFail(t *testing.T) {
+	t.Parallel()
+	// Abuse the testing framework to mark a fake test as failed.
+	t2 := &testing.T{}
+	completed := false
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		// Ensure ExpectEqual* can be run from a goroutine.
+		defer wg.Done()
+		ExpectEqualf(t2, true, false, "foo %s %d", "bar", 2)
+		completed = true
+	}()
+	wg.Wait()
+	if !completed {
+		t.Fatal("didn't complete")
+	}
+
+}
+
+// Other
 
 type stubTB struct {
 	*testing.T
@@ -143,19 +274,24 @@ func (s *stubTB) Log(args ...interface{}) {
 func TestNewWriter(t *testing.T) {
 	tStub := &stubTB{T: t}
 	out := NewWriter(tStub)
-	defer func() {
-		if out != nil {
-			out.Close()
-		}
-	}()
 	logger := log.New(out, "Foo:", 0)
 	logger.Printf("Q: What is the answer to life the universe and everything?")
 	logger.Printf("A: %d", 42)
-	out.Close()
-	out = nil
+	ExpectEqual(t, nil, out.Close())
 	expected := []string{
 		"Foo:Q: What is the answer to life the universe and everything?",
 		"Foo:A: 42",
 	}
 	AssertEqual(t, expected, tStub.out)
+}
+
+func TestTruncatePath(t *testing.T) {
+	data := []struct{ in, expected string }{
+		{"foo", "foo"},
+		{filepath.Join("foo", "bar"), filepath.Join("foo", "bar")},
+		{filepath.Join("foo", "bar", "baz"), filepath.Join("bar", "baz")},
+	}
+	for i, line := range data {
+		AssertEqualIndex(t, i, line.expected, truncatePath(line.in))
+	}
 }
