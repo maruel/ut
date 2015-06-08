@@ -76,7 +76,7 @@ func Decorate(s string) string {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqual(t testing.TB, expected, actual interface{}) {
-	AssertEqualf(t, expected, actual, "AssertEqual() failure.\nExpected: %# v\nActual:   %# v", pretty.Formatter(expected), pretty.Formatter(actual))
+	AssertEqualf(t, expected, actual, "AssertEqual() failure.\nExpected: %# v\nActual:   %# v", format(expected), format(actual))
 }
 
 // AssertEqualIndex verifies that two objects are equals and calls FailNow() to
@@ -91,7 +91,7 @@ func AssertEqual(t testing.TB, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqualIndex(t testing.TB, index int, expected, actual interface{}) {
-	AssertEqualf(t, expected, actual, "AssertEqualIndex() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, pretty.Formatter(expected), pretty.Formatter(actual))
+	AssertEqualf(t, expected, actual, "AssertEqualIndex() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, format(expected), format(actual))
 }
 
 // AssertEqualf verifies that two objects are equals and calls FailNow() to
@@ -137,7 +137,7 @@ func AssertEqualf(t testing.TB, expected, actual interface{}, format string, ite
 //
 // Equality is determined via reflect.DeepEqual().
 func ExpectEqual(t testing.TB, expected, actual interface{}) {
-	ExpectEqualf(t, expected, actual, "ExpectEqual() failure.\nExpected: %# v\nActual:   %# v", pretty.Formatter(expected), pretty.Formatter(actual))
+	ExpectEqualf(t, expected, actual, "ExpectEqual() failure.\nExpected: %# v\nActual:   %# v", format(expected), format(actual))
 }
 
 // ExpectEqualIndex verifies that two objects are equals and calls Fail() to
@@ -152,7 +152,7 @@ func ExpectEqual(t testing.TB, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func ExpectEqualIndex(t testing.TB, index int, expected, actual interface{}) {
-	ExpectEqualf(t, expected, actual, "ExpectEqualIndex() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, pretty.Formatter(expected), pretty.Formatter(actual))
+	ExpectEqualf(t, expected, actual, "ExpectEqualIndex() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, format(expected), format(actual))
 }
 
 // ExpectEqualf verifies that two objects are equals and calls Fail() to mark
@@ -209,4 +209,49 @@ func (t testingWriter) Close() error {
 // Don't forget to defer foo.Close().
 func NewWriter(t testing.TB) io.WriteCloser {
 	return &testingWriter{t: t}
+}
+
+// Private stuff.
+
+// format creates a formatter that is both pretty and size limited.
+//
+// The limit is hardcoded to 2048. If you need more, edit the sources or send a
+// pull request.
+func format(i interface{}) fmt.Formatter {
+	return &formatter{formatter: pretty.Formatter(i), limit: 2048}
+}
+
+type formatter struct {
+	formatter fmt.Formatter
+	limit     int
+	size      int
+}
+
+func (f *formatter) Format(s fmt.State, c rune) {
+	l := &limiter{s, f.limit, f.size}
+	f.formatter.Format(l, c)
+	f.size = l.size
+}
+
+type limiter struct {
+	fmt.State
+	limit int
+	size  int
+}
+
+func (l *limiter) Write(data []byte) (int, error) {
+	var err error
+	if l.size <= l.limit {
+		if chunk := len(data); chunk+l.size > l.limit {
+			chunk = l.limit - l.size
+			if chunk != 0 {
+				_, err = l.State.Write(data[:chunk])
+			}
+			_, err = l.State.Write([]byte("..."))
+			l.size = l.limit + 1
+		} else {
+			_, err = l.State.Write(data)
+		}
+	}
+	return len(data), err
 }

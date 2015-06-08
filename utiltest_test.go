@@ -5,9 +5,11 @@
 package ut
 
 import (
+	"fmt"
 	"log"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -272,6 +274,7 @@ func (s *stubTB) Log(args ...interface{}) {
 }
 
 func TestNewWriter(t *testing.T) {
+	t.Parallel()
 	tStub := &stubTB{T: t}
 	out := NewWriter(tStub)
 	logger := log.New(out, "Foo:", 0)
@@ -286,6 +289,7 @@ func TestNewWriter(t *testing.T) {
 }
 
 func TestTruncatePath(t *testing.T) {
+	t.Parallel()
 	data := []struct{ in, expected string }{
 		{"foo", "foo"},
 		{filepath.Join("foo", "bar"), filepath.Join("foo", "bar")},
@@ -294,4 +298,11 @@ func TestTruncatePath(t *testing.T) {
 	for i, line := range data {
 		AssertEqualIndex(t, i, line.expected, truncatePath(line.in))
 	}
+}
+
+func TestFormatter(t *testing.T) {
+	t.Parallel()
+	large := strings.Repeat("0123456789abcedf", 2048/16+1)
+	expected := strings.Repeat("0123456789abcedf", 2048/16) + "..."
+	AssertEqual(t, expected, fmt.Sprintf("%s", format(large)))
 }
