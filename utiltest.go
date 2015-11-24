@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/kr/pretty"
+	"github.com/pmezard/go-difflib/difflib"
 )
 
 var newLine = []byte{'\n'}
@@ -76,7 +77,7 @@ func Decorate(s string) string {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqual(t testing.TB, expected, actual interface{}) {
-	AssertEqualf(t, expected, actual, "AssertEqual() failure.\nExpected: %# v\nActual:   %# v", format(expected), format(actual))
+	AssertEqualf(t, expected, actual, "AssertEqual() failure.\n%# v", formatAsDiff(expected, actual))
 }
 
 // AssertEqualIndex verifies that two objects are equals and calls FailNow() to
@@ -91,7 +92,7 @@ func AssertEqual(t testing.TB, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqualIndex(t testing.TB, index int, expected, actual interface{}) {
-	AssertEqualf(t, expected, actual, "AssertEqualIndex() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, format(expected), format(actual))
+	AssertEqualf(t, expected, actual, "AssertEqualIndex() failure.\nIndex: %d\n%# v", index, formatAsDiff(expected, actual))
 }
 
 // AssertEqualf verifies that two objects are equals and calls FailNow() to
@@ -137,7 +138,7 @@ func AssertEqualf(t testing.TB, expected, actual interface{}, format string, ite
 //
 // Equality is determined via reflect.DeepEqual().
 func ExpectEqual(t testing.TB, expected, actual interface{}) {
-	ExpectEqualf(t, expected, actual, "ExpectEqual() failure.\nExpected: %# v\nActual:   %# v", format(expected), format(actual))
+	ExpectEqualf(t, expected, actual, "ExpectEqual() failure.\n%# v", formatAsDiff(expected, actual))
 }
 
 // ExpectEqualIndex verifies that two objects are equals and calls Fail() to
@@ -152,7 +153,7 @@ func ExpectEqual(t testing.TB, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func ExpectEqualIndex(t testing.TB, index int, expected, actual interface{}) {
-	ExpectEqualf(t, expected, actual, "ExpectEqualIndex() failure.\nIndex: %d\nExpected: %# v\nActual:   %# v", index, format(expected), format(actual))
+	ExpectEqualf(t, expected, actual, "ExpectEqualIndex() failure.\nIndex: %d\n%# v", index, formatAsDiff(expected, actual))
 }
 
 // ExpectEqualf verifies that two objects are equals and calls Fail() to mark
@@ -231,6 +232,27 @@ func (f *formatter) Format(s fmt.State, c rune) {
 	l := &limiter{s, f.limit, f.size}
 	f.formatter.Format(l, c)
 	f.size = l.size
+}
+
+// formatAsDiff returns a formatable object that will print itself as the diff
+// between two objects.
+func formatAsDiff(expected, actual interface{}) fmt.Formatter {
+	return &formatterAsDiff{expected, actual}
+}
+
+type formatterAsDiff struct {
+	expected, actual interface{}
+}
+
+func (f *formatterAsDiff) Format(s fmt.State, c rune) {
+	diff := difflib.UnifiedDiff{
+		A:        difflib.SplitLines(pretty.Sprintf("%# v", f.expected)),
+		B:        difflib.SplitLines(pretty.Sprintf("%# v", f.actual)),
+		FromFile: "Expected",
+		ToFile:   "Actual",
+		Context:  3,
+	}
+	_ = difflib.WriteUnifiedDiff(s, diff)
 }
 
 type limiter struct {
