@@ -245,9 +245,15 @@ type formatterAsDiff struct {
 }
 
 func (f *formatterAsDiff) Format(s fmt.State, c rune) {
+	expected := pretty.Sprintf("%# v", f.expected)
+	actual := pretty.Sprintf("%# v", f.actual)
+	if strings.IndexByte(expected, '\n') == -1 && strings.IndexByte(actual, '\n') == -1 {
+		fmt.Fprintf(s, "Expected: %s\nActual:   %s", expected, actual)
+		return
+	}
 	diff := difflib.UnifiedDiff{
-		A:        difflib.SplitLines(pretty.Sprintf("%# v", f.expected)),
-		B:        difflib.SplitLines(pretty.Sprintf("%# v", f.actual)),
+		A:        difflib.SplitLines(expected),
+		B:        difflib.SplitLines(actual),
 		FromFile: "Expected",
 		ToFile:   "Actual",
 		Context:  3,
