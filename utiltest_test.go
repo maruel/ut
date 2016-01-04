@@ -306,3 +306,10 @@ func TestFormatter(t *testing.T) {
 	expected := strings.Repeat("0123456789abcedf", 2048/16) + "..."
 	AssertEqual(t, expected, fmt.Sprintf("%s", format(large)))
 }
+
+func TestDiffEscapeANSI(t *testing.T) {
+	t.Parallel()
+	actual := fmt.Sprintf("% #v", formatAsDiff("\033[31mHi", "\033[32mHi"))
+	expected := "Expected: \\033[31mHi\nActual:   \\033[32mHi"
+	AssertEqual(t, expected, actual)
+}

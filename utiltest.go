@@ -245,8 +245,9 @@ type formatterAsDiff struct {
 }
 
 func (f *formatterAsDiff) Format(s fmt.State, c rune) {
-	expected := pretty.Sprintf("%# v", f.expected)
-	actual := pretty.Sprintf("%# v", f.actual)
+	// Format the items and escape those pesky ANSI codes.
+	expected := strings.Replace(pretty.Sprintf("%# v", f.expected), "\033", "\\033", -1)
+	actual := strings.Replace(pretty.Sprintf("%# v", f.actual), "\033", "\\033", -1)
 	if strings.IndexByte(expected, '\n') == -1 && strings.IndexByte(actual, '\n') == -1 {
 		fmt.Fprintf(s, "Expected: %s\nActual:   %s", expected, actual)
 		return
