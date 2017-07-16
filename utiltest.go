@@ -77,6 +77,7 @@ func Decorate(s string) string {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqual(t testing.TB, expected, actual interface{}) {
+	t.Helper()
 	AssertEqualf(t, expected, actual, "AssertEqual() failure.\n%# v", formatAsDiff(expected, actual))
 }
 
@@ -92,6 +93,7 @@ func AssertEqual(t testing.TB, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqualIndex(t testing.TB, index int, expected, actual interface{}) {
+	t.Helper()
 	AssertEqualf(t, expected, actual, "AssertEqualIndex() failure.\nIndex: %d\n%# v", index, formatAsDiff(expected, actual))
 }
 
@@ -105,6 +107,7 @@ func AssertEqualIndex(t testing.TB, index int, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func AssertEqualf(t testing.TB, expected, actual interface{}, format string, items ...interface{}) {
+	t.Helper()
 	// This is cheezy, as there's no way to figure out if the test was properly
 	// started by the test framework.
 	found := false
@@ -138,6 +141,7 @@ func AssertEqualf(t testing.TB, expected, actual interface{}, format string, ite
 //
 // Equality is determined via reflect.DeepEqual().
 func ExpectEqual(t testing.TB, expected, actual interface{}) {
+	t.Helper()
 	ExpectEqualf(t, expected, actual, "ExpectEqual() failure.\n%# v", formatAsDiff(expected, actual))
 }
 
@@ -153,6 +157,7 @@ func ExpectEqual(t testing.TB, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func ExpectEqualIndex(t testing.TB, index int, expected, actual interface{}) {
+	t.Helper()
 	ExpectEqualf(t, expected, actual, "ExpectEqualIndex() failure.\nIndex: %d\n%# v", index, formatAsDiff(expected, actual))
 }
 
@@ -166,6 +171,7 @@ func ExpectEqualIndex(t testing.TB, index int, expected, actual interface{}) {
 //
 // Equality is determined via reflect.DeepEqual().
 func ExpectEqualf(t testing.TB, expected, actual interface{}, format string, items ...interface{}) {
+	t.Helper()
 	if !reflect.DeepEqual(actual, expected) {
 		// Errorf() is thread-safe, t.Fatalf() is not.
 		t.Errorf(Decorate(format), items...)
