@@ -6,11 +6,16 @@ sudo: false
 language: go
 
 go:
-- 1.8.x
+- 1.9.7
 - 1.x
 
-before_install:
-  - go get github.com/maruel/pre-commit-go/cmd/pcg
+before_script:
+  - go get -u -v github.com/client9/misspell/cmd/misspell github.com/gordonklaus/ineffassign golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
 
 script:
-  - pcg
+  - echo 'Check Code is well formatted'; ! gofmt -s -d . | read
+  - echo 'Erroring on misspelling'; ! misspell . | grep a
+  - ineffassign .
+  - if [[ $TRAVIS_GO_VERSION != 1.9.7 ]]; then go vet -vettool=$GOPATH/bin/shadow ./...; fi
+  - go test -cover ./...
+  - go test -race ./...

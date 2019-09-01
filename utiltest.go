@@ -276,7 +276,9 @@ func (l *limiter) Write(data []byte) (int, error) {
 			if chunk != 0 {
 				_, err = l.State.Write(data[:chunk])
 			}
-			_, err = l.State.Write([]byte("..."))
+			if err == nil {
+				_, err = l.State.Write([]byte("..."))
+			}
 			l.size = l.limit + 1
 		} else {
 			_, err = l.State.Write(data)
